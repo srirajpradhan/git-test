@@ -12,24 +12,24 @@ pipeline {
             echo "${env.RELEASE_SCOPE}"
        }
       }
-
-      if(env.RELEASE_SCOPE.equals('patch')) {
-        stage('Two-A') {
+      stage('Two') {
+        if(env.RELEASE_SCOPE.equals('patch')) {
           steps {
             input('Do you want to continue ?')
             }
+        } else if(env.RELEASE_SCOPE.equals('minor')) {
+          echo "hello option 2"
         }
-      } else if(env.RELEASE_SCOPE.equals('minor')) {
-        stage('Two-B') {
-          steps {
-            echo 'Hello Jenkins 2'
+      }
+
+      stage('Three') {
+        when {
+          not {
+            branch "master"
           }
         }
-      } else if(env.RELEASE_SCOPE.equals('major')) {
-        stage("Two-C") {
-         steps {
-          echo "Helo Two-C"
-         }
+        steps {
+          echo 'Hello Jenkins 2'
         }
       }
     }
