@@ -10,6 +10,7 @@ pipeline {
                                      description: 'What is the release scope?')]
             }
             echo "${env.RELEASE_SCOPE}"
+       }
       }
 
       stage('Two') {
