@@ -18,7 +18,8 @@ pipeline {
           script {
             if(env.RELEASE_SCOPE.equals('patch')) {
               echo 'hello 1'
-            } else if (env.RELEASE_SCOPE('minor')) {
+            }
+            if (env.RELEASE_SCOPE('minor')) {
               echo 'hello 2'
             } else {
               echo 'hello 3'
