@@ -12,13 +12,16 @@ pipeline {
             echo "${env.RELEASE_SCOPE}"
        }
       }
+
       stage('Two') {
-        if(env.RELEASE_SCOPE.equals('patch')) {
-          steps {
+        steps {
+          if(env.RELEASE_SCOPE.equals('patch')) {
             input('Do you want to continue ?')
-            }
-        } else if(env.RELEASE_SCOPE.equals('minor')) {
-          echo "hello option 2"
+          } else if(env.RELEASE_SCOPE.equals('minor')) {
+            echo 'Hello option-2'
+          } else {
+            echo 'Hello option-any'
+          }
         }
       }
 
