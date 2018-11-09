@@ -28,26 +28,5 @@ pipeline {
           echo 'Hello Jenkins 2'
         }
       }
-
-      stage('Four') {
-        parallel {
-          stage('Unit Test') {
-            steps {
-              echo "Runnint Unit Test.............."
-            }
-          }
-          stage('Integration Test') {
-            agent {
-              docker {
-                reuseNode true
-                image 'ubuntu'
-              }
-            }
-            steps {
-              echo "Running Integration Test............."
-            }
-          }
-        }
-      }
     }
 }
