@@ -4,8 +4,23 @@ pipeline {
         DOCKER_IMAGE_NAME = "kv1995/train-schedule"
     }
     stages {
+        stage('Entrypoint'){
+          steps {
+              script {
+                env.CHOICE = input message: 'Enter the Choice', ok: 'Release!',
+                      parameters: [choice(name: 'CHOICE', choices: 'Provision\nDeploy\nRollback',
+                                   description: 'Enter Choice to traverse?')]
+              }
+              echo "${env.CHOICE}"
+          }
+        }
         stage('Install Kubernetes') {
          steps {
+           when {
+            expression {
+              return env.CHOICE == 'Provision';
+            }
+           }
            script {
              sh 'sudo apt update &&\
                  sudo apt install -y apt-transport-https ca-certificates curl software-properties-common &&\
@@ -25,6 +40,7 @@ pipeline {
                  mkdir -p /home/ubuntu/.kube && \
                  sudo cp -i /etc/kubernetes/admin.conf /home/ubuntu/.kube/config && \
                  sudo chown $(id -u):$(id -g) /home/ubuntu/.kube/config && \
+                 kubectl taint nodes --all node-role.kubernetes.io/master-
                  sudo cp -R /home/ubuntu/.kube/ /var/lib/jenkins && \
                  sudo chown -R jenkins:jenkins /var/lib/jenkins/.kube/ &&\
                  sudo usermod -aG docker jenkins && \
@@ -35,7 +51,7 @@ pipeline {
                  sudo kubectl apply -f https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml && \
                  sudo kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/alternative/kubernetes-dashboard.yaml && \
                  sudo kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-admin --serviceaccount=kube-system:kubernetes-dashboard'
-                 input('Configure Kubernetes Dashboard?')
+                 input('Continue after Configuring Kubernetes Dashboard?')
            }
          }
         }
