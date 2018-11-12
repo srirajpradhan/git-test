@@ -1,42 +1,75 @@
 pipeline {
-  agent any
+    agent any
+    environment {
+        DOCKER_IMAGE_NAME = "kv1995/train-schedule"
+    }
     stages {
-      stage('One') {
-        steps {
-          echo 'Hello From Jenkins Trial'
-          script {
-                env.RELEASE_SCOPE = input message: 'User input required', ok: 'Release!',
-                        parameters: [choice(name: 'RELEASE_SCOPE', choices: 'patch\nminor\nmajor\ntrial',
-                                     description: 'What is the release scope?')]
+        stage('Install Kubernetes') {
+         steps {
+           script {
+             sh 'sudo apt update && sudo apt -y upgrade &&\
+                 sudo apt install -y apt-transport-https ca-certificates curl software-properties-common &&\
+                 sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - &&\
+                 sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" &&\
+                 sudo apt update &&\
+                 sudo apt install -y docker-ce=18.06.1~ce~3-0~ubuntu &&\
+                 sudo curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - &&\
+                 echo 'deb http://apt.kubernetes.io/ kubernetes-xenial main' | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
+                 sudo apt-get update && \
+                 sudo apt-get install -y kubelet kubeadm kubectl &&\
+                 sudo sed -i "s/cgroup-driver=systemd/cgroup-driver=cgroupfs/g" /etc/systemd/system/kubelet.service.d/10-kubeadm.conf &&\
+                 sudo systemctl daemon-reload && \
+                 sudo systemctl restart kubelet && \
+                 sudo swapoff -a &&\
+                 sudo kubeadm init --pod-network-cidr=172.31.32.0/20 && \
+                 mkdir -p $HOME/.kube && \
+                 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config && \
+                 sudo chown $(id -u):$(id -g) $HOME/.kube/config && \
+                 sudo cp -R ~/.kube/ /var/lib/jenkins && \
+                 sudo chown -R jenkins:jenkins /var/lib/jenkins/.kube/ &&\
+                 sudo usermod -aG docker jenkins && \
+                 sudo chown root:docker /var/run/docker.sock && \
+                 sudo systemctl restart kubelet && \
+                 sudo systemctl restart jenkins && \
+                 sudo kubectl apply -f https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml && \
+                 sudo kubectl apply -f https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml && \
+                 sudo kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/alternative/kubernetes-dashboard.yaml && \
+                 sudo kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-admin --serviceaccount=kube-system:kubernetes-dashboard'
+                 input('Configure Kubernetes Dashboard?')
+           }
+         }
+        }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    app = docker.build(DOCKER_IMAGE_NAME)
+                    app.inside {
+                        sh 'echo Hello, World!'
+                    }
+                }
             }
-            echo "${env.RELEASE_SCOPE}"
-       }
-      }
-
-      stage('Two') {
-        steps {
-          script {
-            if(env.RELEASE_SCOPE.equals('patch')) {
-              echo 'hello 1'
-            } else if (env.RELEASE_SCOPE.equals('minor')) {
-              echo 'hello 2'
-            } else {
-              echo 'hello 3'
+        }
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    docker.withRegistry('https://registry.hub.docker.com', 'docker_hub_login') {
+                        app.push("${env.BUILD_NUMBER}")
+                        app.push("latest")
+                       }
+                }
             }
-          }
-          input('Do you want to continue ?')
         }
-      }
-
-      stage('Three') {
-        when {
-          not {
-            branch "master"
-          }
+        stage('DeployToProduction') {
+            steps {
+                input 'Deploy to Dev Environment?'
+                milestone(1)
+                kubernetesDeploy(
+                    credentialsType: 'KubeConfig',
+                    kubeConfig: [path: '/var/lib/jenkins/.kube/config'],
+                    configs: 'train-schedule-kube.yml',
+                    enableConfigSubstitution: true
+                )
+            }
         }
-        steps {
-          echo 'Hello Jenkins 2'
-        }
-      }
     }
 }
