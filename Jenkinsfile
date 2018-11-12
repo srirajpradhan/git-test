@@ -15,17 +15,17 @@ pipeline {
                  sudo apt install -y docker-ce=18.06.1~ce~3-0~ubuntu &&\
                  sudo curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - &&\
                  echo 'deb http://apt.kubernetes.io/ kubernetes-xenial main' | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
-                 sudo apt-get update && \
+                 sudo apt update && \
                  sudo apt-get install -y kubelet kubeadm kubectl &&\
                  sudo sed -i "s/cgroup-driver=systemd/cgroup-driver=cgroupfs/g" /etc/systemd/system/kubelet.service.d/10-kubeadm.conf &&\
                  sudo systemctl daemon-reload && \
                  sudo systemctl restart kubelet && \
                  sudo swapoff -a &&\
                  sudo kubeadm init --pod-network-cidr=172.31.32.0/20 && \
-                 mkdir -p $HOME/.kube && \
-                 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config && \
-                 sudo chown $(id -u):$(id -g) $HOME/.kube/config && \
-                 sudo cp -R ~/.kube/ /var/lib/jenkins && \
+                 mkdir -p /home/ubuntu/.kube && \
+                 sudo cp -i /etc/kubernetes/admin.conf /home/ubuntu/.kube/config && \
+                 sudo chown $(id -u):$(id -g) /home/ubuntu/.kube/config && \
+                 sudo cp -R /home/ubuntu/.kube/ /var/lib/jenkins && \
                  sudo chown -R jenkins:jenkins /var/lib/jenkins/.kube/ &&\
                  sudo usermod -aG docker jenkins && \
                  sudo chown root:docker /var/run/docker.sock && \
